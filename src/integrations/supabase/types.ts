@@ -14,16 +14,253 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          issue_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          issue_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          issue_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      issues: {
+        Row: {
+          assigned_to: string | null
+          category: Database["public"]["Enums"]["issue_category"]
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          latitude: number | null
+          location_name: string | null
+          longitude: number | null
+          reported_by: string
+          resolution_comment: string | null
+          resolution_image_url: string | null
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["issue_status"] | null
+          title: string
+          updated_at: string | null
+          upvotes_count: number | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          category: Database["public"]["Enums"]["issue_category"]
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          latitude?: number | null
+          location_name?: string | null
+          longitude?: number | null
+          reported_by: string
+          resolution_comment?: string | null
+          resolution_image_url?: string | null
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["issue_status"] | null
+          title: string
+          updated_at?: string | null
+          upvotes_count?: number | null
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: Database["public"]["Enums"]["issue_category"]
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          latitude?: number | null
+          location_name?: string | null
+          longitude?: number | null
+          reported_by?: string
+          resolution_comment?: string | null
+          resolution_image_url?: string | null
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["issue_status"] | null
+          title?: string
+          updated_at?: string | null
+          upvotes_count?: number | null
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          issue_id: string | null
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          issue_id?: string | null
+          message: string
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          issue_id?: string | null
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          full_name: string | null
+          id: string
+          is_verified: boolean | null
+          phone: string | null
+          points: number | null
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          is_verified?: boolean | null
+          phone?: string | null
+          points?: number | null
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          is_verified?: boolean | null
+          phone?: string | null
+          points?: number | null
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          notification_radius_km: number | null
+          updated_at: string | null
+          upvote_threshold: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notification_radius_km?: number | null
+          updated_at?: string | null
+          upvote_threshold?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notification_radius_km?: number | null
+          updated_at?: string | null
+          upvote_threshold?: number | null
+        }
+        Relationships: []
+      }
+      upvotes: {
+        Row: {
+          created_at: string | null
+          id: string
+          issue_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          issue_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          issue_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "upvotes_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "citizen" | "official" | "admin"
+      issue_category:
+        | "roads"
+        | "streetlights"
+        | "parks"
+        | "toilets"
+        | "water"
+        | "electricity"
+        | "waste"
+        | "other"
+      issue_status: "open" | "in_progress" | "resolved"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +387,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["citizen", "official", "admin"],
+      issue_category: [
+        "roads",
+        "streetlights",
+        "parks",
+        "toilets",
+        "water",
+        "electricity",
+        "waste",
+        "other",
+      ],
+      issue_status: ["open", "in_progress", "resolved"],
+    },
   },
 } as const
