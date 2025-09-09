@@ -17,7 +17,8 @@ const issueSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   category: z.string().min(1, 'Please select a category'),
-  location_name: z.string().min(3, 'Location must be at least 3 characters'),
+  state: z.string().min(1, 'Please select a state'),
+  city: z.string().min(1, 'Please select a city'),
 });
 
 type IssueFormData = z.infer<typeof issueSchema>;
@@ -40,7 +41,8 @@ const ReportIssueDialog = ({ onIssueReported }: ReportIssueDialogProps) => {
       title: '',
       description: '',
       category: '',
-      location_name: '',
+      state: '',
+      city: '',
     },
   });
 
@@ -54,6 +56,29 @@ const ReportIssueDialog = ({ onIssueReported }: ReportIssueDialogProps) => {
     { value: 'waste', label: 'Waste Management' },
     { value: 'other', label: 'Other' },
   ];
+
+  const states = [
+    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
+    'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+    'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+    'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi'
+  ];
+
+  const cities = {
+    'Andhra Pradesh': ['Hyderabad', 'Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore'],
+    'Karnataka': ['Bangalore', 'Mysore', 'Hubli', 'Mangalore', 'Belgaum'],
+    'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Thane', 'Nashik'],
+    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli', 'Salem'],
+    'Delhi': ['New Delhi', 'Central Delhi', 'North Delhi', 'South Delhi', 'East Delhi'],
+    'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar'],
+    'Rajasthan': ['Jaipur', 'Jodhpur', 'Kota', 'Bikaner', 'Ajmer'],
+    'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Ghaziabad', 'Agra', 'Varanasi'],
+    'West Bengal': ['Kolkata', 'Howrah', 'Durgapur', 'Asansol', 'Siliguri'],
+    'Kerala': ['Thiruvananthapuram', 'Kochi', 'Kozhikode', 'Thrissur', 'Kollam'],
+  } as Record<string, string[]>;
+
+  const selectedState = form.watch('state');
+  const availableCities = selectedState ? cities[selectedState] || [] : [];
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -103,20 +128,27 @@ const ReportIssueDialog = ({ onIssueReported }: ReportIssueDialogProps) => {
       return;
     }
 
+    if (!selectedImage) {
+      toast({
+        title: 'Error',
+        description: 'Please attach a photo of the issue.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      let imageUrl: string | null = null;
-      
-      if (selectedImage) {
-        imageUrl = await uploadImage(selectedImage);
-        if (!imageUrl) {
-          toast({
-            title: 'Warning',
-            description: 'Failed to upload image, but issue will be reported without it.',
-            variant: 'destructive',
-          });
-        }
+      const imageUrl = await uploadImage(selectedImage);
+      if (!imageUrl) {
+        toast({
+          title: 'Error',
+          description: 'Failed to upload image. Please try again.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
       }
 
       const { error } = await supabase
@@ -125,7 +157,7 @@ const ReportIssueDialog = ({ onIssueReported }: ReportIssueDialogProps) => {
           title: data.title,
           description: data.description,
           category: data.category as 'roads' | 'streetlights' | 'parks' | 'toilets' | 'water' | 'electricity' | 'waste' | 'other',
-          location_name: data.location_name,
+          location_name: `${data.city}, ${data.state}`,
           reported_by: user.id,
           image_url: imageUrl,
           status: 'open' as 'open' | 'in_progress' | 'resolved',
@@ -210,13 +242,52 @@ const ReportIssueDialog = ({ onIssueReported }: ReportIssueDialogProps) => {
 
             <FormField
               control={form.control}
-              name="location_name"
+              name="state"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Street address or landmark" {...field} />
-                  </FormControl>
+                  <FormLabel>State</FormLabel>
+                  <Select onValueChange={(value) => {
+                    field.onChange(value);
+                    form.setValue('city', ''); // Reset city when state changes
+                  }} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select state" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {states.map((state) => (
+                        <SelectItem key={state} value={state}>
+                          {state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select city" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {availableCities.map((city) => (
+                        <SelectItem key={city} value={city}>
+                          {city}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -241,7 +312,9 @@ const ReportIssueDialog = ({ onIssueReported }: ReportIssueDialogProps) => {
             />
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Attach Photo (Optional)</label>
+              <label className="text-sm font-medium">
+                Attach Photo <span className="text-destructive">*</span>
+              </label>
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -259,6 +332,7 @@ const ReportIssueDialog = ({ onIssueReported }: ReportIssueDialogProps) => {
                   accept="image/*"
                   onChange={handleImageSelect}
                   className="hidden"
+                  required
                 />
               </div>
               
@@ -280,6 +354,12 @@ const ReportIssueDialog = ({ onIssueReported }: ReportIssueDialogProps) => {
                   </Button>
                 </div>
               )}
+              
+              {!selectedImage && (
+                <p className="text-sm text-muted-foreground">
+                  Photo is required to report an issue
+                </p>
+              )}
             </div>
 
             <div className="flex gap-2 pt-4">
@@ -293,7 +373,7 @@ const ReportIssueDialog = ({ onIssueReported }: ReportIssueDialogProps) => {
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !selectedImage}
                 className="flex-1 bg-civic-blue hover:bg-civic-blue/90"
               >
                 {isSubmitting ? 'Submitting...' : 'Report Issue'}
