@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Plus, TrendingUp, MapPin, Clock } from 'lucide-react';
+import { Plus, TrendingUp, MapPin, Clock, ThumbsUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/layout/Header';
 import MobileNavigation from '@/components/layout/MobileNavigation';
 import { useToast } from '@/components/ui/use-toast';
+import ReportIssueDialog from '@/components/forms/ReportIssueDialog';
 
 interface Issue {
   id: string;
@@ -100,10 +101,7 @@ const Index = () => {
             Report infrastructure issues, upvote concerns that affect you, and track their resolution.
             Together, we can make our community better.
           </p>
-          <Button size="lg" className="bg-civic-blue hover:bg-civic-blue/90 text-white">
-            <Plus className="mr-2 h-5 w-5" />
-            Report an Issue
-          </Button>
+          <ReportIssueDialog onIssueReported={fetchIssues} />
         </section>
 
         {/* Quick Stats */}
@@ -168,10 +166,7 @@ const Index = () => {
                     <p className="text-muted-foreground mb-4">
                       Be the first to report an infrastructure issue in your community.
                     </p>
-                    <Button>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Report First Issue
-                    </Button>
+                    <ReportIssueDialog onIssueReported={fetchIssues} />
                   </CardContent>
                 </Card>
               ) : (
@@ -184,26 +179,42 @@ const Index = () => {
                             <Badge className={getCategoryColor(issue.category)}>
                               {issue.category}
                             </Badge>
-                            <Badge variant="secondary">
-                              {issue.upvotes_count} upvotes
+                            <Badge 
+                              variant={issue.status === 'resolved' ? 'default' : issue.status === 'in_progress' ? 'secondary' : 'outline'}
+                              className={issue.status === 'resolved' ? 'bg-civic-green text-civic-green-foreground' : 
+                                        issue.status === 'in_progress' ? 'bg-civic-orange text-civic-orange-foreground' : ''}
+                            >
+                              {issue.status?.replace('_', ' ')}
                             </Badge>
                           </div>
                           <h4 className="font-semibold text-foreground mb-1">{issue.title}</h4>
                           <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                             {issue.description}
                           </p>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {issue.location_name}
-                            </span>
-                            <span>
-                              {new Date(issue.created_at).toLocaleDateString()}
-                            </span>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {issue.location_name}
+                              </span>
+                              <span>
+                                {new Date(issue.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 text-sm font-medium text-civic-blue">
+                              <ThumbsUp className="h-4 w-4" />
+                              {issue.upvotes_count || 0}
+                            </div>
                           </div>
                         </div>
                         {issue.image_url && (
-                          <div className="w-16 h-16 bg-muted rounded-lg flex-shrink-0"></div>
+                          <div className="w-16 h-16 bg-muted rounded-lg flex-shrink-0 overflow-hidden">
+                            <img 
+                              src={issue.image_url} 
+                              alt="Issue" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
                         )}
                       </div>
                     </CardContent>
