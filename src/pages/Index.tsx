@@ -10,6 +10,7 @@ import Header from '@/components/layout/Header';
 import MobileNavigation from '@/components/layout/MobileNavigation';
 import { useToast } from '@/components/ui/use-toast';
 import ReportIssueDialog from '@/components/forms/ReportIssueDialog';
+import IssuesBrowser from '@/components/issues/IssuesBrowser';
 
 interface Issue {
   id: string;
@@ -28,12 +29,95 @@ const Index = () => {
   const { toast } = useToast();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loadingIssues, setLoadingIssues] = useState(true);
+  const [userUpvotes, setUserUpvotes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user) {
       fetchIssues();
+      fetchUserUpvotes();
     }
   }, [user]);
+
+  const fetchUserUpvotes = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('upvotes')
+        .select('issue_id')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setUserUpvotes(new Set(data.map(upvote => upvote.issue_id)));
+    } catch (error) {
+      console.error('Error fetching user upvotes:', error);
+    }
+  };
+
+  const handleUpvote = async (issueId: string) => {
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to upvote issues.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const isUpvoted = userUpvotes.has(issueId);
+
+    try {
+      if (isUpvoted) {
+        // Remove upvote
+        const { error } = await supabase
+          .from('upvotes')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('issue_id', issueId);
+
+        if (error) throw error;
+
+        setUserUpvotes(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(issueId);
+          return newSet;
+        });
+
+        // Update local state
+        setIssues(prev => prev.map(issue => 
+          issue.id === issueId 
+            ? { ...issue, upvotes_count: Math.max(0, issue.upvotes_count - 1) }
+            : issue
+        ));
+      } else {
+        // Add upvote
+        const { error } = await supabase
+          .from('upvotes')
+          .insert({
+            user_id: user.id,
+            issue_id: issueId,
+          });
+
+        if (error) throw error;
+
+        setUserUpvotes(prev => new Set([...prev, issueId]));
+
+        // Update local state
+        setIssues(prev => prev.map(issue => 
+          issue.id === issueId 
+            ? { ...issue, upvotes_count: issue.upvotes_count + 1 }
+            : issue
+        ));
+      }
+    } catch (error) {
+      console.error('Error toggling upvote:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update upvote. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const fetchIssues = async () => {
     try {
@@ -101,7 +185,10 @@ const Index = () => {
             Report infrastructure issues, upvote concerns that affect you, and track their resolution.
             Together, we can make our community better.
           </p>
-          <ReportIssueDialog onIssueReported={fetchIssues} />
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <ReportIssueDialog onIssueReported={fetchIssues} />
+            <IssuesBrowser />
+          </div>
         </section>
 
         {/* Quick Stats */}
@@ -191,21 +278,29 @@ const Index = () => {
                           <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                             {issue.description}
                           </p>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {issue.location_name}
-                              </span>
-                              <span>
-                                {new Date(issue.created_at).toLocaleDateString()}
-                              </span>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {issue.location_name}
+                                </span>
+                                <span>
+                                  {new Date(issue.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant={userUpvotes.has(issue.id) ? "default" : "outline"}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUpvote(issue.id);
+                                }}
+                                className={userUpvotes.has(issue.id) ? "bg-civic-blue hover:bg-civic-blue/90" : ""}
+                              >
+                                <ThumbsUp className="h-4 w-4 mr-1" />
+                                {issue.upvotes_count || 0}
+                              </Button>
                             </div>
-                            <div className="flex items-center gap-1 text-sm font-medium text-civic-blue">
-                              <ThumbsUp className="h-4 w-4" />
-                              {issue.upvotes_count || 0}
-                            </div>
-                          </div>
                         </div>
                         {issue.image_url && (
                           <div className="w-16 h-16 bg-muted rounded-lg flex-shrink-0 overflow-hidden">
