@@ -12,6 +12,7 @@ import MobileNavigation from '@/components/layout/MobileNavigation';
 import { useToast } from '@/components/ui/use-toast';
 import ReportIssueDialog from '@/components/forms/ReportIssueDialog';
 import IssuesBrowser from '@/components/issues/IssuesBrowser';
+import ResolvedIssuesBrowser from '@/components/issues/ResolvedIssuesBrowser';
 
 interface Issue {
   id: string;
@@ -202,6 +203,7 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <ReportIssueDialog onIssueReported={() => fetchIssues(selectedCity)} />
             <IssuesBrowser />
+            <ResolvedIssuesBrowser />
           </div>
         </section>
 
