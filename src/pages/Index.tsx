@@ -4,6 +4,7 @@ import { Plus, TrendingUp, MapPin, Clock, ThumbsUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/layout/Header';
@@ -30,13 +31,19 @@ const Index = () => {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loadingIssues, setLoadingIssues] = useState(true);
   const [userUpvotes, setUserUpvotes] = useState<Set<string>>(new Set());
+  const [selectedCity, setSelectedCity] = useState<string>('');
 
   useEffect(() => {
     if (user) {
-      fetchIssues();
       fetchUserUpvotes();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user && selectedCity) {
+      fetchIssues(selectedCity);
+    }
+  }, [user, selectedCity]);
 
   const fetchUserUpvotes = async () => {
     if (!user) return;
@@ -119,12 +126,19 @@ const Index = () => {
     }
   };
 
-  const fetchIssues = async () => {
+  const fetchIssues = async (city?: string) => {
+    if (!city) {
+      setIssues([]);
+      setLoadingIssues(false);
+      return;
+    }
+
+    setLoadingIssues(true);
     try {
       const { data, error } = await supabase
         .from('issues')
         .select('*')
-        .eq('status', 'open')
+        .ilike('location_name', `${city},%`)
         .order('upvotes_count', { ascending: false })
         .limit(10);
 
@@ -186,7 +200,7 @@ const Index = () => {
             Together, we can make our community better.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <ReportIssueDialog onIssueReported={fetchIssues} />
+            <ReportIssueDialog onIssueReported={() => fetchIssues(selectedCity)} />
             <IssuesBrowser />
           </div>
         </section>
@@ -223,16 +237,43 @@ const Index = () => {
           </Card>
         </section>
 
-        {/* Recent Issues */}
+        {/* City Selection & Recent Issues */}
         <section className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <h3 className="text-xl font-semibold text-foreground">Trending Issues</h3>
-            <Button variant="outline" size="sm">
-              View All
-            </Button>
+            <div className="flex items-center gap-4">
+              <Select value={selectedCity} onValueChange={setSelectedCity}>
+                <SelectTrigger className="w-[200px] bg-card">
+                  <SelectValue placeholder="Select your city" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border z-50">
+                  <SelectItem value="Dehradun">Dehradun</SelectItem>
+                  <SelectItem value="Mumbai">Mumbai</SelectItem>
+                  <SelectItem value="New Delhi">New Delhi</SelectItem>
+                  <SelectItem value="Bangalore">Bangalore</SelectItem>
+                  <SelectItem value="Chennai">Chennai</SelectItem>
+                  <SelectItem value="Kolkata">Kolkata</SelectItem>
+                  <SelectItem value="Hyderabad">Hyderabad</SelectItem>
+                  <SelectItem value="Pune">Pune</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm">
+                View All
+              </Button>
+            </div>
           </div>
 
-          {loadingIssues ? (
+          {!selectedCity ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h4 className="text-lg font-medium text-foreground mb-2">Select Your City</h4>
+                <p className="text-muted-foreground mb-4">
+                  Choose your city to see trending issues in your area and make your voice heard.
+                </p>
+              </CardContent>
+            </Card>
+          ) : loadingIssues ? (
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
                 <Card key={i} className="animate-pulse">
@@ -249,11 +290,11 @@ const Index = () => {
                 <Card>
                   <CardContent className="p-8 text-center">
                     <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h4 className="text-lg font-medium text-foreground mb-2">No Issues Yet</h4>
+                    <h4 className="text-lg font-medium text-foreground mb-2">No Issues in {selectedCity}</h4>
                     <p className="text-muted-foreground mb-4">
-                      Be the first to report an infrastructure issue in your community.
+                      Be the first to report an infrastructure issue in {selectedCity}.
                     </p>
-                    <ReportIssueDialog onIssueReported={fetchIssues} />
+                    <ReportIssueDialog onIssueReported={() => fetchIssues(selectedCity)} />
                   </CardContent>
                 </Card>
               ) : (
