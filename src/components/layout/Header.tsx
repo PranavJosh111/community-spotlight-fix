@@ -1,4 +1,5 @@
-import { MapPin, Menu, Bell } from 'lucide-react';
+import { useState } from 'react';
+import { MapPin, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -7,10 +8,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
+import NotificationsDialog from '@/components/notifications/NotificationsDialog';
 
 const Header = () => {
   const { user, signOut } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleSignOut = async () => {
     await signOut();
@@ -30,15 +32,10 @@ const Header = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <Badge 
-              variant="destructive" 
-              className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center"
-            >
-              3
-            </Badge>
-          </Button>
+          <NotificationsDialog 
+            unreadCount={unreadCount} 
+            onUnreadCountChange={setUnreadCount}
+          />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
